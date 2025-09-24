@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model DeployedWallet {
+    id         String           @id @default(cuid())
+    canisterId String           @unique @map("canister_id")
+    name       String           @unique
+    status     DeploymentStatus @default(DEPLOYING)
+    metadata   Json?
+    wasmHash   String?          @map("wasm_hash")
+    createdAt  DateTime         @default(now()) @map("created_at")
+    updatedAt  DateTime         @updatedAt @map("updated_at")
+
+    signers    WalletSigner[]
+
+    @@map("deployed_wallets")
+}
+
+model User {
+    id          String   @id @default(cuid())
+    principal   String   @unique
+    address     String?
+    displayName String?  @map("display_name")
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @updatedAt @map("updated_at")
+
+    walletSigners WalletSigner[]
+
+    @@map("users")
+}
+
+model WalletSigner {
+    id       String   @id @default(cuid())
+    walletId String   @map("wallet_id")
+    userId   String   @map("user_id")
+    wallet   DeployedWallet @relation(fields: [walletId], references: [id])
+    user     User           @relation(fields: [userId], references: [id])
+
+    @@unique([walletId, userId])
+    @@map("wallet_signers")
+}
+
+enum DeploymentStatus {
+    DEPLOYING
+    DEPLOYED
+    FAILED
+    STOPPED
+}

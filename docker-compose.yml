@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: icp-postgres
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: icp_user
+      POSTGRES_PASSWORD: icp_password
+      POSTGRES_DB: icp_canister_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - icp-network
+
+  app:
+    build: .
+    container_name: icp-backend
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+    networks:
+      - icp-network
+
+volumes:
+  postgres_data:
+
+networks:
+  icp-network:
+    driver: bridge
