@@ -57,8 +57,7 @@ dfx --version           # Latest
 ### 1. Clone Repository
 
 ```bash
-git clone <repository-url>
-cd icp-canister-backend
+git clone https://github.com/your-username/icp-canister-backend.git
 ```
 
 ### 2. Install Dependencies
