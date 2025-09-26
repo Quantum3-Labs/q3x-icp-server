@@ -77,6 +77,7 @@ nano .env
 ```
 
 **Important**: Configure your `.env` file with the database connection string before starting the database:
+
 ```bash
 DATABASE_URL="postgresql://icp_user:icp_password@localhost:5433/icp_canister_db"
 ```
@@ -231,10 +232,10 @@ curl -X GET http://localhost:4000/api/health
 ```bash
 curl -X POST http://localhost:4000/api/wallets \
   -H "Content-Type: application/json" \
-  -d "{
-    'name': 'Team Treasury',
-    'metadata': { 'description': 'Main treasury for team operations' }
-  }"
+  -d '{
+    "name": "Team Treasury",
+    "metadata": { "description": "Main treasury for team operations" }
+  }'
 ```
 
 #### Get Wallet Status
