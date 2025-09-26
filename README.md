@@ -66,7 +66,22 @@ git clone https://github.com/your-username/icp-canister-backend.git
 yarn install
 ```
 
-### 3. Database Setup
+### 3. Environment Configuration
+
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Edit .env file with your configuration
+nano .env
+```
+
+**Important**: Configure your `.env` file with the database connection string before starting the database:
+```bash
+DATABASE_URL="postgresql://icp_user:icp_password@localhost:5433/icp_canister_db"
+```
+
+### 4. Database Setup
 
 #### Docker Compose Setup
 
@@ -93,8 +108,7 @@ Database: icp_canister_db
 Username: icp_user
 Password: icp_password
 
-# Update your .env file with:
-DATABASE_URL="postgresql://icp_user:icp_password@localhost:5433/icp_canister_db"
+# This should match what you configured in your .env file
 ```
 
 #### Prisma Configuration
@@ -108,16 +122,6 @@ yarn db:migrate
 
 # Optional: Seed database with initial data
 yarn db:seed
-```
-
-### 4. Environment Configuration
-
-```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit .env file with your configuration
-nano .env
 ```
 
 ### 5. Generate Backend Identity
