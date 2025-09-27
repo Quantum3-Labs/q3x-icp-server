@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Logger,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { CreateWalletDto } from './dto/create-wallet.dto';
@@ -41,18 +42,6 @@ export class WalletController {
     };
   }
 
-  @Get()
-  async getAllWallets(): Promise<WalletsResponseDto> {
-    this.logger.log('Getting all wallets');
-    const wallets = await this.walletService.getAllWallets();
-
-    return {
-      success: true,
-      data: wallets,
-      count: wallets.length,
-    };
-  }
-
   @Get(':canisterId')
   async getWallet(
     @Param('canisterId') canisterId: string,
@@ -64,6 +53,24 @@ export class WalletController {
       success: true,
       data: wallet,
     };
+  }
+
+  @Get()
+  async getAllWalletsByPrincipal(
+    @Query('principal') principal?: string,
+  ): Promise<WalletsResponseDto> {
+    this.logger.log('principal:', principal);
+    if (principal) {
+      this.logger.log(`Getting wallets for principal: ${principal}`);
+      const wallets = await this.walletService.getWalletsByPrincipal(principal);
+      console.log("🚀 ~ WalletController ~ getAllWalletsByPrincipal ~ wallets:", wallets)
+
+      return {
+        success: true,
+        data: wallets,
+        count: wallets.length,
+      };
+    }
   }
 
   @Delete(':canisterId')

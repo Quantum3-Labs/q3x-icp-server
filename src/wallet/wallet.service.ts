@@ -23,7 +23,7 @@ export class WalletService {
   ) {}
 
   async createUserWallet(createWalletDto: CreateWalletDto): Promise<Wallet> {
-    const { metadata, name } = createWalletDto;
+    const { metadata, name, creatorPrincipal, signers } = createWalletDto;
 
     try {
       // Step 1: Create canister FIRST, then save to database
@@ -34,14 +34,58 @@ export class WalletService {
       this.logger.log(`Canister created: ${canisterId}`);
 
       // Step 2: Create database record with actual canister ID
-      const deployedWallet = await this.prismaService.deployedWallet.create({
-        data: {
-          canisterId,
-          name: name,
-          status: DeploymentStatus.DEPLOYING,
-          metadata: metadata || {},
+      const deployedWallet = await this.prismaService.$transaction(
+        async (tx) => {
+          // Create/get all users (including creator)
+          const users = [];
+
+          // TODO: not want call mutiple times here
+          for (const principal of signers) {
+            let user = await tx.user.findUnique({
+              where: { principal },
+            });
+
+            if (!user) {
+              user = await tx.user.create({
+                data: {
+                  principal,
+                  displayName: `User ${principal.substring(0, 8)}...`,
+                },
+              });
+              this.logger.log(`Created new user: ${principal}`);
+            }
+            users.push(user);
+          }
+
+          // Create wallet with signers
+          const wallet = await tx.deployedWallet.create({
+            data: {
+              canisterId,
+              name: name,
+              status: DeploymentStatus.DEPLOYING,
+              metadata: {
+                ...metadata,
+                createdBy: creatorPrincipal,
+              },
+              signers: {
+                create: users.map((user) => ({
+                  userId: user.id,
+                })),
+              },
+            },
+          });
+
+          return wallet;
         },
-      });
+      );
+      // const deployedWallet = await this.prismaService.deployedWallet.create({
+      //   data: {
+      //     canisterId,
+      //     name: name,
+      //     status: DeploymentStatus.DEPLOYING,
+      //     metadata: metadata || {},
+      //   },
+      // });
 
       try {
         // Step 3: Install WASM code
@@ -96,6 +140,7 @@ export class WalletService {
           canisterId: true,
           metadata: true,
           status: true,
+          name: true
         },
       });
 
@@ -121,6 +166,7 @@ export class WalletService {
         orderBy: { createdAt: 'desc' },
         select: {
           canisterId: true,
+          name: true
         },
       });
 
@@ -129,6 +175,60 @@ export class WalletService {
       this.logger.error('Failed to get all wallets', error);
       throw new BadRequestException(`Failed to get wallets: ${error.message}`);
     }
+  }
+
+  async getWalletsByPrincipal(principal: string): Promise<Wallet[]> {
+    const wallets = await this.prismaService.deployedWallet.findMany({
+      where: {
+        signers: {
+          some: {
+            user: {
+              principal: principal,
+            },
+          },
+        },
+      },
+      include: {
+        signers: {
+          include: {
+            user: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return wallets.map((wallet) => new Wallet(wallet));
+  }
+
+  async getWalletById(walletId: string, principal: string): Promise<Wallet> {
+    const wallet = await this.prismaService.deployedWallet.findFirst({
+      where: {
+        id: walletId,
+        signers: {
+          some: {
+            user: {
+              principal: principal,
+            },
+          },
+        },
+      },
+      include: {
+        signers: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    if (!wallet) {
+      throw new NotFoundException('Wallet not found or access denied');
+    }
+
+    return new Wallet(wallet);
   }
 
   async deleteUserWallet(canisterId: string): Promise<boolean> {
