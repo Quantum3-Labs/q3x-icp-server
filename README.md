@@ -7,6 +7,7 @@
 A robust backend service built with NestJS that provides a REST API for deploying and managing multisig wallet canisters on the Internet Computer Protocol (ICP). This service acts as a bridge between client applications and the ICP network, handling canister deployment, tracking deployment status, and managing wallet configurations.
 
 ### Key Features
+
 - **Deploy Canisters**: Automated deployment of multisig wallet canisters to ICP
 - **Track Deployments**: Real-time monitoring and status tracking of canister deployments
 - **REST API**: RESTful endpoints for wallet management and canister operations
@@ -14,6 +15,7 @@ A robust backend service built with NestJS that provides a REST API for deployin
 - **Identity Management**: Secure identity handling for ICP interactions
 
 ### Architecture
+
 ```
 Client Application → REST API → Backend Service → ICP Network
                                       ↓
@@ -21,6 +23,7 @@ Client Application → REST API → Backend Service → ICP Network
 ```
 
 The system consists of:
+
 - **Backend Deployment Service**: NestJS application handling API requests
 - **Database Tracking**: PostgreSQL database storing deployment records and wallet data
 - **ICP Integration**: Direct communication with Internet Computer canisters
@@ -28,13 +31,15 @@ The system consists of:
 ## 2. Prerequisites & Requirements
 
 ### System Requirements
+
 - **Node.js**: Version 18.x or higher
 - **Yarn**: Package manager (latest stable version)
 - **Docker**: Latest stable version
-- **Docker Compose**: Latest stable version
+- **Docker Compose V2**: Latest stable version (built into Docker)
 - **DFX**: Internet Computer SDK (latest version)
 
 ### Required Tools
+
 ```bash
 # Install DFX (Internet Computer SDK)
 sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
@@ -43,52 +48,43 @@ sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
 node --version           # Should be 18+
 yarn --version          # Latest stable
 docker --version        # Latest stable
-docker-compose --version # Latest stable
+docker compose version # Latest stable
 dfx --version           # Latest
 ```
 
-## 3. Installation & Setup
+## Quick Start
 
-### 1. Clone Repository
-```bash
-git clone <repository-url>
-cd icp-canister-backend
-```
+### 1. Setup
 
-### 2. Install Dependencies
 ```bash
+# Clone and install
+git clone https://github.com/Quantum3-Labs/q3x-icp-server.git
+cd q3x-icp-server
 yarn install
 ```
 
-### 3. Database Setup
+### 2. Environment Configuration
 
-#### Docker Compose Setup
 ```bash
-# Start PostgreSQL database using Docker Compose
-docker-compose up -d postgres
-
-# Verify database is running
-docker-compose ps
-
-# Check database logs (optional)
-docker-compose logs postgres
+# Copy environment template
+cp .env.example .env
 ```
 
-#### Database Connection
-The Docker Compose setup creates a PostgreSQL database with these default credentials:
-```bash
-# Database connection details (from docker-compose.yml)
-Host: localhost
-Port: 5433
-Database: icp_canister_db
-Username: icp_user
-Password: icp_password
+### 3. Database
 
-# Update your .env file with:
-DATABASE_URL="postgresql://icp_user:icp_password@localhost:5433/icp_canister_db"
+```bash
+# Start PostgreSQL
+docker compose up -d postgres
+
+# Verify database is running
+docker compose ps
+
+# Check database logs (optional)
+docker compose logs postgres
 ```
 
 #### Prisma Configuration
+
 ```bash
 # Generate Prisma client
 yarn db:generate
@@ -100,16 +96,8 @@ yarn db:migrate
 yarn db:seed
 ```
 
-### 4. Environment Configuration
-```bash
-# Copy environment template
-cp .env.example .env
+### 4. Generate Backend Identity
 
-# Edit .env file with your configuration
-nano .env
-```
-
-### 5. Generate Backend Identity
 ```bash
 # Generate identity for ICP interactions
 yarn generate:identity
@@ -118,8 +106,10 @@ yarn generate:identity
 # Copy the private key to your .env file as BACKEND_PRIVATE_KEY
 ```
 
-### 6. Asset Preparation
+### 5. Asset Preparation
+
 Ensure required WASM files are in place:
+
 ```bash
 # Verify wallet.wasm exists
 ls -la assets/wallet.wasm
@@ -128,134 +118,96 @@ ls -la assets/wallet.wasm
 # cp path/to/your/wallet.wasm assets/wallet.wasm
 ```
 
-## 4. Configuration Guide
+### 6. Start ICP Replica
 
-### ICP Network Configuration
-
-#### Local Development (DFX)
 ```bash
-ICP_REPLICA_URL=http://localhost:4943
-NODE_ENV=development
-```
-
-#### Mainnet Production
-```bash
-ICP_REPLICA_URL=https://ic0.app
-NODE_ENV=production
-```
-
-### Identity Management
-The backend uses secp256k1 identity for ICP interactions. Generate and manage identities:
-```bash
-# Generate new identity
-yarn generate:identity
-
-# Output will include private key - add to .env as BACKEND_PRIVATE_KEY
-```
-
-## 5. Development Workflow
-
-### 1. Start Local ICP Replica
-```bash
-# In a separate terminal, start DFX local replica
+# Start local ICP replica (separate terminal)
 dfx start --clean --background
 
-# Verify replica is running
-dfx ping local
-```
 
-### 2. Start Database & Run Migrations
+
+### 7. Run Application
+
 ```bash
-# Start PostgreSQL database
-docker-compose up -d postgres
-
-# Wait for database to be ready (check logs)
-docker-compose logs -f postgres
-
-# Apply pending migrations
-yarn db:migrate
-
-# View migration status
+# View migration status (optional)
 npx prisma migrate status
 
 # Access database GUI (optional)
 yarn db:studio
-```
 
-### 3. Start Development Server
-```bash
-# Start in watch mode (recommended for development)
+# Development mode
 yarn start:dev
 
-# Or start normally
-yarn start
-
-# Server will start on http://localhost:4000
+# Server runs on http://localhost:4000
 ```
 
-### 4. Testing Endpoints
+## Configuration
 
-#### Health Check
+### Environment Variables
+
 ```bash
-curl -X GET http://localhost:4000/api/health
+# ICP Network
+ICP_REPLICA_URL=http://localhost:4943  # Local development
+ICP_REPLICA_URL=https://ic0.app        # Production
+
+# Database (matches docker-compose.yml)
+DATABASE_URL="postgresql://icp_user:icp_password@localhost:5433/icp_canister_db"
+
+# Identity
+BACKEND_PRIVATE_KEY=your_generated_private_key
+NODE_ENV=development
 ```
 
-#### Create Wallet
+## API Endpoints
+
 ```bash
+# Health check
+curl http://localhost:4000/api/health
+
+# Create wallet
 curl -X POST http://localhost:4000/api/wallets \
   -H "Content-Type: application/json" \
-  -d "{
-    'name': 'Team Treasury',
-    'metadata': { 'description': 'Main treasury for team operations' }
-  }"
+  -d '{"name": "Team Treasury", "metadata": {"description": "Main treasury"}}'
+
+# Get wallet status
+curl http://localhost:4000/api/wallets/{wallet-id}
+
+# List wallets
+curl http://localhost:4000/api/wallets
+
+# Get canister status
+curl http://localhost:4000/api/wallets/{wallet-id}/canister-status
 ```
 
-#### Get Wallet Status
+## Development Commands
+
 ```bash
-curl -X GET http://localhost:4000/api/wallets/{wallet-id}
-```
+# Application
+yarn start:dev      # Development with hot reload
+yarn build          # Production build
+yarn lint           # Linting
+yarn format         # Code formatting
 
-#### List All Wallets
-```bash
-curl -X GET http://localhost:4000/api/wallets
-```
-
-#### Get Canister Status
-```bash
-curl -X GET http://localhost:4000/api/wallets/{wallet-id}/canister-status
-```
-
-### Development Scripts
-```bash
-# Development with hot reload
-yarn start:dev
-
-# Build for production
-yarn build
-
-# Lint and format code
-yarn lint
-yarn format
-
-# Database operations
+# Database
 yarn db:generate    # Generate Prisma client
 yarn db:migrate     # Run migrations
 yarn db:studio      # Open Prisma Studio GUI
 yarn db:seed        # Seed database
 
 # Docker Compose operations
-docker-compose up -d postgres          # Start database only
-docker-compose up -d                   # Start all services
-docker-compose down                    # Stop all services
-docker-compose logs postgres           # View database logs
-docker-compose exec postgres psql -U icp_user -d icp_canister_db  # Access PostgreSQL CLI
+docker compose up -d postgres          # Start database only
+docker compose up -d                   # Start all services
+docker compose down                    # Stop all services
+docker compose logs postgres           # View database logs
+docker compose exec postgres psql -U icp_user -d icp_canister_db  # Access PostgreSQL CLI
 ```
 
 ## 6. Architecture & File Structure
 
 ### Project Structure
+
 ```
-icp-canister-backend/
+q3x-icp-server/
 ├── src/
 │   ├── app.module.ts           # Main application module
 │   ├── main.ts                 # Application entry point
@@ -286,24 +238,28 @@ icp-canister-backend/
 ### Service Responsibilities
 
 #### WalletService
+
 - Canister deployment and management
 - Wallet lifecycle operations
 - Database persistence
 - Status tracking and updates
 
 #### CanisterManagerService  
+
 - Direct ICP canister interactions
 - Canister creation and installation
 - Cycle management
 - Status monitoring
 
 #### ICPAgentService
+
 - ICP network communication
 - Identity management
 - Request/response handling
 - Error handling and retries
 
 #### PrismaService
+
 - Database connection management
 - Query execution
 - Transaction handling
